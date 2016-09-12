@@ -9,15 +9,18 @@ var runSequence     = require('run-sequence');
 
 // SASS Build task
 gulp.task('sass', function() {
-  return gulp.src(['src/**/css/*.scss'],{base: 'src'})
+  return gulp.src(['src/**/css/**/*.scss'],{base: 'src'})
     .pipe($.plumber())
     .pipe($.cached('sass'))
     .pipe($.sourcemaps.init())
     .pipe($.sass())
-    .on('error', $.notify.onError({
-      title: 'SASS Failed',
-      message: 'Error(s) occurred during compile!'
-    }))
+    .on('error', function(err){
+      $.notify.onError({
+        title: 'SASS Failed',
+        message: 'Error(s) occurred during compile!'
+      });
+      console.log(err.message);
+    })
     .pipe($.autoprefixer('last 6 version'))
     .pipe($.csscomb())
     .pipe($.sourcemaps.write())
@@ -34,7 +37,7 @@ gulp.task('sass', function() {
 
 // A cache does SASS file at the time of the first practice
 gulp.task('sass-cache', function() {
-  return gulp.src(['src/**/css/*.scss'],{base: 'src'})
+  return gulp.src(['src/**/css/**/*.scss'],{base: 'src'})
     .pipe($.plumber())
     .pipe($.cached('sass'))
 });
@@ -99,7 +102,7 @@ gulp.task('minify-html', function() {
 // SASS Build task for release
 gulp.task('sass:build', function() {
   var s = $.size();
-  return gulp.src(['src/**/css/*.scss'],{base: 'src'})
+  return gulp.src(['src/**/css/**/*.scss'],{base: 'src'})
     .pipe($.sourcemaps.init())
     .pipe($.sass({
       style: 'expanded'
@@ -123,9 +126,15 @@ gulp.task('sass:build', function() {
     }));
 });
 
+// copy css
+gulp.task('copy-css', function() {
+  return gulp.src(['src/**/css/**/*.css'],{base: 'src'})
+    .pipe(gulp.dest('dest'));
+});
+
 // optimize img
 gulp.task('optimize-img', function() {
-  return gulp.src(['src/**/img/*.+(jpg|jpeg|png|gif|svg)'],{base: 'src'})
+  return gulp.src(['src/**/img/**/*.+(jpg|jpeg|png|gif|svg)'],{base: 'src'})
     .pipe($.changed('dest/**/img/'))
     .pipe($.imagemin({
       optimizationLevel: 3,
@@ -137,18 +146,22 @@ gulp.task('optimize-img', function() {
 
 // minify JS
 gulp.task('minify-js', function() {
-  return gulp.src(['src/**/js/*.js','!src/**/js/*.min.js'],{base: 'src'})
+  return gulp.src(['src/**/js/**/*.js','!src/**/js/**/*.min.js'],{base: 'src'})
     .pipe($.stripDebug())
     .pipe($.uglify())
     .pipe($.rename({suffix: '.min'}))
     .pipe(gulp.dest('dest'));
 });
+
 // copy js
 gulp.task('copy-js', function() {
-  return gulp.src(['src/**/js/*.js'],{base: 'src'})
+  return gulp.src(['src/**/js/**/*.js','src/**/js/**/*.json'],{base: 'src'})
     .pipe(gulp.dest('dest'));
 });
-
+gulp.task('copy-json', function() {
+  return gulp.src(['src/**/*.json'],{base: 'src'})
+    .pipe(gulp.dest('dest'));
+});
 
 // calculate build folder size
 gulp.task('build:size', function() {
@@ -171,10 +184,12 @@ var frontnote = require("gulp-frontnote");
 gulp.task('styleguide', function() {
   return gulp.src(['src/**/css/*.scss'],{base: 'src'})
     .pipe(frontnote({
-          out: './doc'
+
+          title:'スタイルガイド',
+          overview: './overview.md',
           // template: './my-template',
-          // overview: './overview.md',
-          // includePath: 'assets/**/*'
+          // includeAssetPath: 'assets/**/*'
+          out: './doc'
       }));
 });
 
@@ -209,11 +224,13 @@ gulp.task('default', ['server','sass-cache'], function() {
 gulp.task('build', function(callback) {
   runSequence(
     'clean:build',
-    'sass:build',
-    'optimize-img',
+    'copy-css',
     'copy-html',
     'copy-js',
+    'copy-json',
     // 'minify-js',
+    'sass:build',
+    'optimize-img',
     'build:size',
     callback);
 });
